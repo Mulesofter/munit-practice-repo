@@ -26,5 +26,11 @@ jobs:
         with:
           maven-version: 3.9.6
 
-      - name: Run Maven tests
-        run: mvn test -B
+      - name: Build and run MUnit tests
+        run: mvn clean package -B
+
+      - name: Upload Mule application JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: mule-application
+          path: target/*.jar
