@@ -48,8 +48,4 @@ velocity.log
 # MUnit generated reports/logs
 reports/
 munit-error.txt
-# MuleSoft secure configuration
-src/main/resources/secure-properties.yaml
-# MuleSoft secure configuration
-src/main/resources/secure-properties.yaml
-src/main/resources/application.properties
+
