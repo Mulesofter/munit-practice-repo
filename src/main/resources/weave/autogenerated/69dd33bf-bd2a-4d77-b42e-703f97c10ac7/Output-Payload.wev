@@ -1,0 +1,8 @@
+%dw 2.0
+
+type auto_69dd33bf_bd2a_4d77_b42e_703f97c10ac7_Output_Payload = Array<{|  CustomerID: String {"typeId": "Customer_ID__c"} | Null,   FullName: String,   Email: String {"typeId": "Email__c"} | Null,   Phone: String {"typeId": "Phone__c"} | Null,   DOB: Date {"typeId": "Date_of_Birth__c"} | Null,   SSNLast4: String {"typeId": "SSN_Last_4__c"} | Null,   AddressLine1: String {"typeId": "Address_Line_1__c"} | Null,   City: String {"typeId": "City__c"} | Null,   State: String {"typeId": "State__c"} | Null,   PostalCode: String {"typeId": "Postal_Code__c"} | Null,   Status: "ACTIVE" | "INACTIVE"|}> | {|
+  customerStatus?: "ACTIVE" | "INACTIVE", 
+  message: String, 
+  status?: Number
+|}
+

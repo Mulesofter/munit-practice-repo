@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_69dd33bf_bd2a_4d77_b42e_703f97c10ac7_Input_Attributes = {| uriParams: {| customerId: String |} |}
+

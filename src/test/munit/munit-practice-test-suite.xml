@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+        http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+    <munit:config name="munit-practice-test-suite.xml"/>
+
+<munit:test
+    name="Success-Customer-Lookup"
+    description="Test successful customer lookup from database">
+
+    <munit:behavior>
+
+        <munit-tools:mock-when
+            processor="db:select"
+            doc:name="Mock DB Select">
+
+            <munit-tools:with-attributes>
+
+                <munit-tools:with-attribute
+                    attributeName="doc:name"
+                    whereValue="Select By ID"/>
+
+            </munit-tools:with-attributes>
+
+            <munit-tools:then-return>
+
+                <munit-tools:payload value="#[[
+                    {
+                        account_id: 'A1001',
+                        customer_id: 'C1001',
+                        plan_type: '401K',
+                        plan_name: 'Retirement Plan',
+                        balance: 50000,
+                        settled_balance: 48000,
+                        vested_balance: 45000,
+                        available_for_withdrawal: 20000,
+                        currency: 'USD',
+                        status: 'ACTIVE',
+                        tax_year: 2026
+                    }
+                ]]"/>
+
+            </munit-tools:then-return>
+
+        </munit-tools:mock-when>
+
+    </munit:behavior>
+
+    <munit:execution>
+
+        <munit:set-event doc:name="Set Event Input">
+
+            <munit:attributes value="#[
+                {
+                    uriParams: {
+                        customerId: 'C1001'
+                    }
+                }
+            ]"/>
+
+        </munit:set-event>
+
+        <flow-ref
+            name="DB-Lookup"
+            doc:name="Call DB-Lookup"/>
+
+    </munit:execution>
+
+    <munit:validation>
+
+        <munit-tools:assert-that
+            expression="#[payload[0].account_id]"
+            is="#[MunitTools::equalTo('A1001')]"
+            doc:name="Assert Account ID"/>
+
+        <munit-tools:assert-that
+            expression="#[payload[0].balance]"
+            is="#[MunitTools::equalTo(50000)]"
+            doc:name="Assert Balance"/>
+
+        <munit-tools:assert-that
+            expression="#[payload[0].status]"
+            is="#[MunitTools::equalTo('ACTIVE')]"
+            doc:name="Assert Status"/>
+
+        <munit-tools:assert-that
+            expression="#[payload[0].tax_year]"
+            is="#[MunitTools::equalTo(2026)]"
+            doc:name="Assert Tax Year"/>
+
+        <munit-tools:verify-call
+            processor="db:select"
+            doc:name="Verify DB Select Was Called">
+
+            <munit-tools:with-attributes>
+
+                <munit-tools:with-attribute
+                    attributeName="doc:name"
+                    whereValue="Select By ID"/>
+
+            </munit-tools:with-attributes>
+
+        </munit-tools:verify-call>
+
+    </munit:validation>
+
+</munit:test>
+
+
+    <munit:test
+        name="SalesforceChoice-ACTIVE"
+        doc:id="008cc7f9-11d0-4b38-b04d-bfd51b294ee9">
+
+        <munit:behavior>
+
+            <!-- MOCK SALESFORCE -->
+
+            <munit-tools:mock-when
+                doc:name="Mock SF Query"
+                doc:id="08d77b9a-6dad-44be-aba1-83725f2bd9ac"
+                processor="salesforce:query">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        whereValue="Query"
+                        attributeName="doc:name"/>
+
+                </munit-tools:with-attributes>
+
+                <munit-tools:then-return>
+
+                    <munit-tools:payload value="#[[
+                        {
+                            Customer_ID__c: 'C1010',
+                            First_Name__c: 'John',
+                            Last_Name__c: 'Smith',
+                            Email__c: 'john.smith@example.com',
+                            Phone__c: '555-123-4567',
+                            Date_of_Birth__c: '1980-05-15',
+                            SSN_Last_4__c: '1234',
+                            Address_Line_1__c: '123 Main Street',
+                            City__c: 'Richmond',
+                            State__c: 'VA',
+                            Postal_Code__c: '23220',
+                            Status__c: 'ACTIVE'
+                        }
+                    ]]"/>
+
+                </munit-tools:then-return>
+
+            </munit-tools:mock-when>
+
+
+            <!-- SPY SALESFORCE -->
+
+            <munit-tools:spy
+                doc:name="Spy SF Query"
+                doc:id="a5dbac49-8f46-43dc-964d-fda4a28b048a"
+                processor="salesforce:query">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        whereValue="Query"
+                        attributeName="doc:name"/>
+
+                </munit-tools:with-attributes>
+
+                <munit-tools:before-call>
+
+                    <!-- CHECK WHAT IS GOING INTO SALESFORCE -->
+
+                    <munit-tools:assert-that
+                        doc:name="Verify Customer ID"
+                        expression="#[attributes.uriParams.customerId]"
+                        is="#[MunitTools::equalTo('C1010')]"/>
+
+                </munit-tools:before-call>
+
+            </munit-tools:spy>
+
+        </munit:behavior>
+
+
+        <!-- EXECUTION -->
+
+        <munit:execution>
+
+            <munit:set-event
+                doc:name="Set Event"
+                doc:id="28929882-48c5-46d7-8428-3a6a1d92d7be">
+
+                <munit:attributes
+                    value="#[{
+                        uriParams: {
+                            customerId: 'C1010'
+                        }
+                    }]"/>
+
+            </munit:set-event>
+
+            <flow-ref
+                doc:name="Call SF-Check"
+                doc:id="2bfe0de3-2bf0-41b0-8478-d8f20bde41f5"
+                name="SF-Check"/>
+
+        </munit:execution>
+
+
+        <!-- VALIDATION -->
+
+        <munit:validation>
+
+            <!-- FINAL OUTPUT -->
+
+            <munit-tools:assert-that
+                doc:name="Assert Customer ID"
+                expression="#[payload[0].CustomerID]"
+                is="#[MunitTools::equalTo('C1010')]"/>
+
+            <munit-tools:assert-that
+                doc:name="Assert Full Name"
+                expression="#[payload[0].FullName]"
+                is="#[MunitTools::equalTo('John Smith')]"/>
+
+            <munit-tools:assert-that
+                doc:name="Assert Email"
+                expression="#[payload[0].Email]"
+                is="#[MunitTools::equalTo('john.smith@example.com')]"/>
+
+            <munit-tools:assert-that
+                doc:name="Assert Status"
+                expression="#[payload[0].Status]"
+                is="#[MunitTools::equalTo('ACTIVE')]"/>
+
+
+            <!-- VERIFY SALESFORCE WAS CALLED -->
+
+            <munit-tools:verify-call
+                doc:name="Verify Salesforce Query"
+                doc:id="dbc04348-27c2-4de8-95df-97c31ee10488"
+                processor="salesforce:query">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        whereValue="Query"
+                        attributeName="doc:name"/>
+
+                </munit-tools:with-attributes>
+
+            </munit-tools:verify-call>
+
+        </munit:validation>
+
+    </munit:test>
+
+
+    <munit:test
+        name="SalesforceChoice-INACTIVE"
+        doc:id="3649db70-3797-4cf4-8bcb-e372f3470888">
+
+        <munit:behavior>
+
+            <munit-tools:mock-when
+                doc:name="Mock SF Query"
+                doc:id="52c9ad3e-2d3e-4d29-a202-d2c20ad9ece2"
+                processor="salesforce:query">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        whereValue="Query"
+                        attributeName="doc:name"/>
+
+                </munit-tools:with-attributes>
+
+                <munit-tools:then-return>
+
+                    <munit-tools:payload value="#[[
+                        {
+                            Customer_ID__c: 'C1010',
+                            First_Name__c: 'John',
+                            Last_Name__c: 'Smith',
+                            Email__c: 'john.smith@example.com',
+                            Phone__c: '555-123-4567',
+                            Date_of_Birth__c: '1980-01-01',
+                            SSN_Last_4__c: '1234',
+                            Address_Line_1__c: '123 Main St',
+                            City__c: 'Richmond',
+                            State__c: 'VA',
+                            Postal_Code__c: '23219',
+                            Status__c: 'INACTIVE'
+                        }
+                    ]]"/>
+
+                </munit-tools:then-return>
+
+            </munit-tools:mock-when>
+
+
+            <munit-tools:spy
+                doc:name="Spy SF Query"
+                doc:id="3fe9f61f-9200-4c83-a239-f0c8e538c5a3"
+                processor="salesforce:query">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        whereValue="Query"
+                        attributeName="doc:name"/>
+
+                </munit-tools:with-attributes>
+
+                <munit-tools:before-call>
+
+                    <munit-tools:assert-that
+                        doc:name="Verify Customer ID"
+                        doc:id="68860848-6516-4099-bb2a-cf5d06ddff5e"
+                        expression="#[attributes.uriParams.customerId]"
+                        is="#[MunitTools::equalTo('C1010')]"/>
+
+                </munit-tools:before-call>
+
+            </munit-tools:spy>
+
+        </munit:behavior>
+
+
+        <munit:execution>
+
+            <munit:set-event
+                doc:name="Set Event"
+                doc:id="dc3045c0-93cd-4748-ae22-deda110d8fa2">
+
+                <munit:attributes value="#[{
+                    uriParams: {
+                        customerId: 'C1010'
+                    }
+                }]"/>
+
+            </munit:set-event>
+
+            <flow-ref
+                doc:name="Call SF-Check"
+                doc:id="6547bb88-c899-4890-9d0f-019ffad742b7"
+                name="SF-Check"/>
+
+        </munit:execution>
+
+
+        <munit:validation>
+
+            <munit-tools:assert-that
+                doc:name="Assert Inactive Response"
+                expression="#[payload.message]"
+                is="#[MunitTools::equalTo('The customer is inactive or status is unrecognized')]"/>
+
+            <munit-tools:assert-that
+                doc:name="Assert Customer Status"
+                doc:id="fbf6b515-3c47-49a6-ab40-ee77b41aecb9"
+                expression="#[payload.customerStatus]"
+                is="#[MunitTools::equalTo('INACTIVE')]"/>
+
+            <munit-tools:verify-call
+                doc:name="Verify Salesforce Query"
+                doc:id="c63e4052-76e3-4c2c-9011-aa8eeb04c6df"
+                processor="salesforce:query">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        whereValue="Query"
+                        attributeName="doc:name"/>
+
+                </munit-tools:with-attributes>
+
+            </munit-tools:verify-call>
+
+        </munit:validation>
+
+    </munit:test>
+
+
+    <munit:test
+        name="Account-Summary-Insert-Success"
+        doc:id="c02b68fb-5ae7-48db-a186-7d3a9c6ae317">
+
+        <munit:behavior>
+
+            <munit-tools:mock-when
+                doc:name="Mock DB Insert"
+                doc:id="c88ee802-61cc-4ed3-9f2e-db044777ec53"
+                processor="db:insert">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        attributeName="doc:name"
+                        whereValue="Insert Account Summary"/>
+
+                </munit-tools:with-attributes>
+
+            </munit-tools:mock-when>
+
+
+            <munit-tools:spy
+                doc:name="Spy Validate Input"
+                doc:id="efe178f1-72ed-46a6-a9a0-c936ba6254ec"
+                processor="ee:transform">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        attributeName="doc:name"
+                        whereValue="Validate Input"/>
+
+                </munit-tools:with-attributes>
+
+                <munit-tools:after-call>
+
+                    <munit-tools:assert-that
+                        doc:name="Assert Account ID"
+                        doc:id="bbf4ebd5-498f-46e5-8246-215528a4c62d"
+                        is="#[MunitTools::equalTo('A1011')]"
+                        expression="#[payload.account_id]"/>
+
+                    <munit-tools:assert-that
+                        doc:name="Assert Customer ID"
+                        doc:id="578d10cd-921c-403b-9510-d5a76abe4bfa"
+                        is="#[MunitTools::equalTo('C1011')]"
+                        expression="#[payload.customer_id]"/>
+
+                    <munit-tools:assert-that
+                        doc:name="Assert Client ID"
+                        doc:id="979332db-9427-4940-8530-281ad7cc190b"
+                        is="#[MunitTools::equalTo('C1011')]"
+                        expression="#[payload.client_id]"/>
+
+                </munit-tools:after-call>
+
+            </munit-tools:spy>
+
+        </munit:behavior>
+
+
+        <munit:execution>
+
+            <munit:set-event
+                doc:name="Set Event Input"
+                doc:id="f9100fde-b8bc-4ed5-80d9-3b6fbf4d60c2">
+
+                <munit:payload value="#[{
+                    account_id: 'A1011',
+                    customer_id: 'C1011',
+                    client_id: 'C1011',
+                    plan_type: '401K',
+                    plan_name: 'Retirement Plan',
+                    balance: 50000,
+                    settled_balance: 48000,
+                    vested_balance: 45000,
+                    available_for_withdrawal: 20000,
+                    currency: 'USD',
+                    status: 'ACTIVE',
+                    tax_year: 2026
+                }]"/>
+
+            </munit:set-event>
+
+            <flow-ref
+                doc:name="Execute MQ-Decoupl"
+                doc:id="3e645da5-a17b-4bad-9375-8686d815c4e7"
+                name="MQ-Decoupl"/>
+
+        </munit:execution>
+
+
+        <munit:validation>
+
+            <munit-tools:assert-that
+                doc:name="Assert Final Message"
+                doc:id="ccea88ec-be92-4a4a-a27c-1a31825b8c02"
+                is="#[MunitTools::equalTo('new record inserted')]"
+                expression="#[payload.message]"/>
+
+            <munit-tools:assert-that
+                doc:name="Assert Final Payload"
+                doc:id="76a9a03a-1dc2-4984-80de-8e8d8f161c68"
+                is="#[MunitTools::equalTo('newRecord')]"
+                expression="#[payload.payload]"/>
+
+            <munit-tools:verify-call
+                processor="db:insert"
+                times="1"
+                doc:name="Verify DB Insert">
+
+                <munit-tools:with-attributes>
+
+                    <munit-tools:with-attribute
+                        attributeName="doc:name"
+                        whereValue="Insert Account Summary"/>
+
+                </munit-tools:with-attributes>
+
+            </munit-tools:verify-call>
+
+        </munit:validation>
+
+    </munit:test>
+
+</mule>

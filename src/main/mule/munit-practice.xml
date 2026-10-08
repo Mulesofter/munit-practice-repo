@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9b5bbd49-9bfe-4b89-9475-59b38396f7fa" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="556e5e60-49f0-4067-aff9-6eede7fc27dc" >
+		<db:generic-connection url="jdbc:postgresql://aws-0-us-east-1.pooler.supabase.com:5432/postgres" driverClassName="org.postgresql.Driver" user="postgres.mrkaonsryrkeimmjzbwk" password="${secure::db.password}" />
+	</db:config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="11e668b9-681b-4da9-81a3-176ca45d7467" >
+		<salesforce:basic-connection username="${secure::salesforce.username}" password="${secure::salesforce.password}" securityToken="${secure::salesforce.securityToken}" url="https://login.salesforce.com/services/Soap/u/64.0"/>
+	</salesforce:sfdc-config>
+	<configuration-properties file="application.properties"/>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="a5a2aa9d-e589-4fa0-b3c1-a29d4ddf910c" file="secure-properties.yaml" key="FidelitySecureK1" />
+	<api-gateway:autodiscovery apiId="21222991" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="f8719f69-24b1-482a-81ca-aea10544d2a3" flowRef="DB-Lookup" />
+	<flow name="DB-Lookup" doc:id="5f107524-1f35-422c-9652-b8ebb84e2584" >
+		<http:listener doc:name="DB-Lookup" doc:id="8bc3a514-2eba-4d13-870b-4e4d39766531" config-ref="HTTP_Listener_config" path="/dbLookup/{customerId}"/>
+		<logger level="INFO" doc:name="Log Incoming Request" doc:id="3be95c59-aeec-436a-bab1-1ad15d0d3534" message=" HTTP Request #[attributes.uriParams.customerId]"/>
+		<validation:is-true doc:name="Validate Customer ID" doc:id="894e66b2-c7d6-4bd7-96f5-19ca27714d85" expression="#[!isEmpty(attributes.uriParams.customerId)]" message="Request must have customerId"/>
+		<db:select doc:name="Select By ID" doc:id="10c55dfd-c60b-4514-983f-1c7065faa3cb" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT account_id, plan_type, plan_name, balance, settled_balance, vested_balance, 
+available_for_withdrawal, currency, status, tax_year FROM account_summary WHERE customer_id = :customerId]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	customerId: attributes.uriParams.customerId
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="793e517f-b94b-45b9-84a5-0b5023c21ca7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item) -> {
+    account_id: item.account_id,
+    plan_type: item.plan_type,
+    plan_name: item.plan_name,
+    balance: item.balance,
+    settled_balance: item.settled_balance,
+    vested_balance: item.vested_balance,
+    available_for_withdrawal: item.available_for_withdrawal,
+    currency: item.currency,
+    status: item.status,
+    tax_year: item.tax_year
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="SF-Check" doc:id="69dd33bf-bd2a-4d77-b42e-703f97c10ac7" >
+		<http:listener doc:name="Listener" doc:id="4553ee21-90c8-4967-8a86-9308d1db3c9a" config-ref="HTTP_Listener_config" path="/sfCheck/{customerId}"/>
+		<logger level="INFO" doc:name="Log Incoming Request" doc:id="715c33f2-a8f8-4fdf-a773-3a398f29a79f" message="SF-Check customerId=#[attributes.uriParams.customerId]" />
+		<ee:transform doc:name="Transform Message" doc:id="4b3b5388-f6c2-45a8-b91c-2cc342126a30" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:query doc:name="Query" doc:id="9ba415bf-fb2c-47c3-b9e9-b6fbcbfc56f1" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT 
+            Id,
+            Name,
+            Customer_ID__c,
+            First_Name__c,
+            Last_Name__c,
+            Email__c,
+            Phone__c,
+            Date_of_Birth__c,
+            SSN_Last_4__c,
+            Address_Line_1__c,
+            City__c,
+            State__c,
+            Postal_Code__c,
+            Status__c,
+            External_Id__c,
+            OwnerId,
+            CreatedById,
+            LastModifiedById
+        FROM Customer_Profile__c 
+        WHERE Customer_ID__c = ':customerId']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[{
+	customerId: attributes.uriParams.customerId
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<choice doc:name="Check Status" doc:id="c82e03b1-e92d-412a-8c00-350d5dc17f52" >
+			<when expression="#[isEmpty(payload)]">
+				<ee:transform doc:name="Not Found" doc:id="5eb16bf1-c852-4287-a4f4-40de7f620254">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "status": 404,
+    "message": "Customer not found"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[upper(payload[0].Status__c default '') == 'ACTIVE']">
+				<ee:transform doc:name="Found" doc:id="0d62fa5e-fba2-4f47-9bec-0f0b2867605b">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item) -> {
+    CustomerID: item.Customer_ID__c,
+    FullName: (item.First_Name__c default"") ++ " " ++ (item.Last_Name__c default""),
+    Email: item.Email__c,
+    Phone: item.Phone__c,
+    DOB: item.Date_of_Birth__c,
+    SSNLast4: item.SSN_Last_4__c,
+    AddressLine1: item.Address_Line_1__c,
+    City: item.City__c,
+    State: item.State__c,
+    PostalCode: item.Postal_Code__c,
+    Status: item.Status__c
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="e525691d-1f08-491f-ab92-10099bc734b4" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "The customer is inactive or status is unrecognized",
+    "customerStatus": payload[0].Status__c
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="MQ-Decoupl" doc:id="b20f9956-b023-4845-9977-ce668fb7c23c" >
+		<http:listener doc:name="Listener" doc:id="92087a02-ef29-449c-8cf5-306093970694" config-ref="HTTP_Listener_config" path="/mqDecouple"/>
+		<ee:transform doc:name="Validate Input">
+    <ee:message>
+        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+var accountId = (payload.account_id default "") as String
+var clientId = (payload.client_id default "") as String
+var customerId = (payload.customer_id default "") as String
+
+---
+{
+    account_id: accountId,
+    customer_id: customerId,
+    client_id: clientId,
+    plan_type: payload.plan_type default "",
+    plan_name: payload.plan_name default "",
+    balance: payload.balance default null,
+    settled_balance: payload.settled_balance default null,
+    vested_balance: payload.vested_balance default null,
+    available_for_withdrawal: payload.available_for_withdrawal default null,
+    currency: payload.currency default "",
+    status: payload.status default "",
+    tax_year: payload.tax_year default null,
+    account_id_valid: accountId matches /^A[0-9]{4}$/,
+    customer_id_valid: customerId matches /^C[0-9]{4}$/,
+    client_id_valid: clientId matches /^C[0-9]{4}$/
+}]]></ee:set-payload>
+    </ee:message>
+</ee:transform>
+		<db:insert doc:name="Insert Account Summary" doc:id="486749c9-0eea-4c46-be3e-d86dac19386f" config-ref="Database_Config">
+			<db:sql><![CDATA[
+            INSERT INTO account_summary
+            (
+                account_id,
+                customer_id,
+                plan_type,
+                plan_name,
+                balance,
+                settled_balance,
+                vested_balance,
+                available_for_withdrawal,
+                currency,
+                status,
+                tax_year
+            )
+            VALUES
+            (
+                :account_id,
+                :customer_id,
+                :plan_type,
+                :plan_name,
+                :balance,
+                :settled_balance,
+                :vested_balance,
+                :available_for_withdrawal,
+                :currency,
+                :status,
+                :tax_year
+            )
+        ]]></db:sql>
+			<db:input-parameters><![CDATA[
+            #[{
+                account_id: payload.account_id,
+                customer_id: payload.customer_id,
+                plan_type: payload.plan_type,
+                plan_name: payload.plan_name,
+                balance: payload.balance,
+                settled_balance: payload.settled_balance,
+                vested_balance: payload.vested_balance,
+                available_for_withdrawal: payload.available_for_withdrawal,
+                currency: payload.currency,
+                status: payload.status,
+                tax_year: payload.tax_year
+            }]
+        ]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="4cc7994f-0a30-46de-a082-ab75fe7cbc7a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "new record inserted",
+	payload: "newRecord"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
