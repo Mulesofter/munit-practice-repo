@@ -9,7 +9,7 @@ pipeline {
         stage('Verify Java and Maven') {
             steps {
                 bat 'java -version'
-                bat '"C:\Program Files\Maven\apache-maven-3.9.6\bin\mvn.cmd" -version'
+                bat 'call "C:/Program Files/Maven/apache-maven-3.9.6/bin/mvn.cmd" -version'
             }
         }
     }
