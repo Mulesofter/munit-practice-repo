@@ -12,7 +12,7 @@ http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/m
 http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
 http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9b5bbd49-9bfe-4b89-9475-59b38396f7fa" >
-		<http:listener-connection host="0.0.0.0" port="8081" />
+		<http:listener-connection host="0.0.0.0" port="${http.port}" />
 	</http:listener-config>
 	<db:config name="Database_Config" doc:name="Database Config" doc:id="556e5e60-49f0-4067-aff9-6eede7fc27dc" >
 		<db:generic-connection url="jdbc:postgresql://aws-0-us-east-1.pooler.supabase.com:5432/postgres" driverClassName="org.postgresql.Driver" user="postgres.mrkaonsryrkeimmjzbwk" password="${secure::db.password}" />
