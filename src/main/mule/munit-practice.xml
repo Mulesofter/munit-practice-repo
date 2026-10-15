@@ -12,7 +12,7 @@ http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/m
 http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
 http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9b5bbd49-9bfe-4b89-9475-59b38396f7fa" >
-		<http:listener-connection host="0.0.0.0" port="8082" />
+		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
 	<db:config name="Database_Config" doc:name="Database Config" doc:id="556e5e60-49f0-4067-aff9-6eede7fc27dc" >
 		<db:generic-connection url="jdbc:postgresql://aws-0-us-east-1.pooler.supabase.com:5432/postgres" driverClassName="org.postgresql.Driver" user="postgres.mrkaonsryrkeimmjzbwk" password="${secure::db.password}" />
@@ -22,7 +22,7 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 	</salesforce:sfdc-config>
 	<configuration-properties file="application.properties"/>
 	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="a5a2aa9d-e589-4fa0-b3c1-a29d4ddf910c" file="secure-properties.yaml" key="FidelitySecureK1" />
-	<api-gateway:autodiscovery apiId="21222991" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="f8719f69-24b1-482a-81ca-aea10544d2a3" flowRef="DB-Lookup" />
+	<api-gateway:autodiscovery apiId="21237628" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="f8719f69-24b1-482a-81ca-aea10544d2a3" flowRef="DB-Lookup" />
 	<flow name="DB-Lookup" doc:id="5f107524-1f35-422c-9652-b8ebb84e2584" >
 		<http:listener doc:name="DB-Lookup" doc:id="8bc3a514-2eba-4d13-870b-4e4d39766531" config-ref="HTTP_Listener_config" path="/dbLookup/{customerId}"/>
 		<logger level="INFO" doc:name="Log Incoming Request" doc:id="3be95c59-aeec-436a-bab1-1ad15d0d3534" message=" HTTP Request #[attributes.uriParams.customerId]"/>
